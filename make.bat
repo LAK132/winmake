@@ -4,13 +4,16 @@ SetLocal EnableDelayedExpansion
 set mode=%1
 set target=%2
 
+if not "%mode%"=="debug" if not "%mode%"=="release" if not "%mode%"=="clean" goto useage
+if not "%target%"=="x86" if not "%target%"=="x64" if not "%mode%"=="clean" goto useage
+
+call makelist.bat %target%
+
 if "%mode%"=="clean" goto clean
-if not "%mode%"=="debug" if not "%mode%"=="release" goto useage
-if not "%target%"=="x86" if not "%target%"=="x64" goto useage
 
 echo Compiling in %mode% mode for %target%
 
-call makelist.bat %target%
+title Compiler
 
 REM some windows functions are pedantic about \
 set OUTDIR=!OUTDIR!\%mode%\%target%
@@ -23,6 +26,7 @@ set _LIBS=
 for %%L in (%LIBS%) do (
     set _LIBS=!_LIBS! %LIBDIR%/%%L
 )
+
 if "%mode%"=="debug" goto debug
 if "%mode%"=="release" goto release
 
@@ -48,7 +52,6 @@ set LINKCOM=/SUBSYSTEM:CONSOLE /DEBUG
 goto run
 
 :run
-echo release
 set allobj=
 for %%P in (%SOURCES%) do (
     for %%O in (!%%P_OBJ!) do (
