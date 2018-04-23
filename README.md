@@ -40,7 +40,7 @@ set target1_OBJ=external_cpp.cpp
 set target1_INC=../external_folder/include ../external_folder/include/asdfghjkl
 
 set target2_SRC=src/some/other/folders
-set target2_OBJ=gl3w.c imgui_impl_sdl_gl3.cpp
+set target2_OBJ=file.c anotherCppFile.cpp
 set target2_INC=include include/qwerty
 
 set target3_SRC=src C:\absolute\directory
