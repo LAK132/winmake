@@ -2,6 +2,7 @@
 Batch Makefile for Windows
 
 # Setting up makelist.bat
+`call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" %1` should be changed to point to `vcvarsall.bat` in your version of Visual Studio
 
 `OUTDIR` is the directory where the executable will be saved
 

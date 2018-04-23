@@ -42,12 +42,12 @@ for /f %%F in ('dir /b %BINDIR%') do (
 goto :eof
 
 :release
-set COMPCOM=-DNDEBUG
+set COMPCOM=-DNDEBUG /bigobj
 set LINKCOM=/SUBSYSTEM:CONSOLE
 goto run
 
 :debug
-set COMPCOM=-Zi 
+set COMPCOM=-Zi /bigobj
 set LINKCOM=/SUBSYSTEM:CONSOLE /DEBUG
 goto run
 
