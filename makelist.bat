@@ -11,8 +11,9 @@ set BINDIR=bin
 
 REM Lib files location
 REM dll files found in an x86 or x64 folder in LIBDIR will be copied into the folder with APP
+REM ".\%LIBDIR%\[x64/x86]\%LIB%" -> ".\%LIB%" (for each LIB in %LIBS%)
 set LIBDIR=lib
-REM Libs to include (will be prepended with LIBDIR/)
+REM Libs to include (will be prepended with %LIBDIR%\[x64/x86])
 set LIBS=lib1.lib lib2.lib
 
 REM Source targets
@@ -26,9 +27,38 @@ set target1_OBJ=external_cpp.cpp
 set target1_INC=../external_folder/include ../external_folder/include/asdfghjkl
 
 set target2_SRC=src/some/other/folders
-set target2_OBJ=gl3w.c imgui_impl_sdl_gl3.cpp
+set target2_OBJ=asdasda.c qwerty.cpp
 set target2_INC=include include/qwerty
 
 set target3_SRC=src
 set target3_OBJ=main.cpp other_main.cpp another.cpp
 set target3_INC=include ../external_folder
+
+REM Version of C++ to be used (-std:%CPPVER%)
+set CPPVER=c++latest
+
+REM Command line options for both modes (EXE)
+set COMPOPT=/nologo /EHa /MD /MP /bigobj
+set LINKOPT=/nologo /SUBSYSTEM:CONSOLE
+
+REM Command line options for both modes (DLL)
+REM set COMPOPT=/nologo /EHa /MD /MP /bigobj
+REM set LINKOPT=/nologo /DLL /SUBSYSTEM:CONSOLE
+
+REM Command line options for release mode
+set RELCOMPOPT=/DNDEBUG
+set RELLINKOPT=
+
+REM Command line options for debug mode
+set DBGCOMPOPT=/Zi
+set DBGLINKOPT=/DEBUG
+
+goto :eof
+
+:allcpp
+for /f %%F in ('dir /b "!%~1!"') do (
+    if "%%~xF"==".cpp" set %~2=!%~2! %%F
+    if "%%~xF"==".cc" set %~2=!%~2! %%F
+    if "%%~xF"==".c" set %~2=!%~2! %%F
+)
+EXIT /B
