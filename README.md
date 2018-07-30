@@ -84,3 +84,7 @@ To compile an x86 debug ``C:\your\project\folder> make debug x86``
 To compile an x64 debug ``C:\your\project\folder> make debug x64``
 
 To clean out the object folder ``C:\your\project\folder> make clean``
+
+# Actual makefile
+
+This repo also includes a real makefile with the same layout as makelist for Linux, this is useful for cross platform projects. In the makefile, `OUTDIR`, `BINDIR`, `LIBS`, `SOURCES` and the various `*_SRC`, `*_OBJ` and `*_INC` are exactly the same as in makelist. makefile `LIBDIR` supports multiple space-seperated directories, but is otherwise compatible with the makelist `LIBDIR`

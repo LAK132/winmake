@@ -2,18 +2,18 @@ REM Make sure this points to vcvarsall.bat in your version of Visual Studio
 REM You could replace this with a shortcut or another batch file
 call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" %1
 
-REM Compiler output (OUTDIR/[release/debug]/[x86/x64]/APP)
-set OUTDIR=out
+REM Output file name
 set APP=app.exe
 
+REM Compiler output (%OUTDIR%\[release/debug]\[x86/x64]\%APP%)
+set OUTDIR=out
 REM Binary files temp location
 set BINDIR=bin
-
 REM Lib files location
+set LIBDIR=lib
+
 REM dll files found in an x86 or x64 folder in LIBDIR will be copied into the folder with APP
 REM ".\%LIBDIR%\[x64/x86]\%LIB%" -> ".\%LIB%" (for each LIB in %LIBS%)
-set LIBDIR=lib
-REM Libs to include (will be prepended with %LIBDIR%\[x64/x86])
 set LIBS=lib1.lib lib2.lib
 
 REM Source targets
