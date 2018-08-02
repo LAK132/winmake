@@ -85,4 +85,14 @@ if not "%LIBDIR%"=="\%target%" for /f %%F in ('dir /b %LIBDIR%') do (
     if "%%~xF"==".dll" echo f | xcopy /y %LIBDIR%\%%F %OUTDIR%\%%F
 )
 goto :eof
-*/ var fs=new ActiveXObject("Scripting.FileSystemObject");var date1=0;if(fs.FileExists(WSH.Arguments(0))){date1=Date.parse(fs.GetFile(WSH.Arguments(0)).DateLastModified);}var date2=0;if(fs.FileExists(WSH.Arguments(1))){date2=Date.parse(fs.GetFile(WSH.Arguments(1)).DateLastModified);}WSH.Echo(date1-date2);
+*/ 
+var fs = new ActiveXObject("Scripting.FileSystemObject");
+var date1 = 0;
+if(fs.FileExists(WSH.Arguments(0))){
+    date1=Date.parse(fs.GetFile(WSH.Arguments(0)).DateLastModified);
+}
+var date2 = 0;
+if(fs.FileExists(WSH.Arguments(1))){
+    date2 = Date.parse(fs.GetFile(WSH.Arguments(1)).DateLastModified);
+}
+WSH.Echo(date1 - date2);
