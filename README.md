@@ -1,6 +1,6 @@
 # winmake
 
-Build scripts with no external software dependecies
+Build scripts with no external software dependencies
 
 `make.bat` compares the built object last-modified-date times with their repective source files to see if they need to be rebuilt (similar to GNU-make), this should result in a compile time speed up for large projects
 
