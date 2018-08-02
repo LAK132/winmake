@@ -1,6 +1,6 @@
 REM Make sure this points to vcvarsall.bat in your version of Visual Studio
 REM You could replace this with a shortcut or another batch file
-call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" %1
+call vcvarsall.bat %1
 
 REM Output file name
 set APP=app.exe
