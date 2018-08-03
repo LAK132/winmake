@@ -39,8 +39,6 @@ Copy `make.bat` and `makelist.bat` (and `makefile` for cross-platform projects) 
 
 ## `makelist.bat`
 
-`call vcvarsall.bat %1` should be changed to point to `vcvarsall.bat` in your version of Visual Studio. If `vcvarsall.bat` is in your system PATH variable then you can leave it as is
-
 `APP` is the file name for the executable
 
 `OUTDIR` is the directory where the executable will be saved
@@ -73,11 +71,11 @@ Copy `make.bat` and `makelist.bat` (and `makefile` for cross-platform projects) 
 
 `DBGLINKOPT` is the linker flags to use in only `debug` mode
 
+`call vcvarsall.bat %1` should be changed to point to `vcvarsall.bat` in your version of Visual Studio. If `vcvarsall.bat` is in your system PATH variable then you can leave it as is
+
 Example:
 
 ```
-call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" %1
-
 set APP=app.exe
 set OUTDIR=out
 set BINDIR=bin
@@ -108,6 +106,9 @@ set RELLINKOPT=
 
 set DBGCOMPOPT=/Zi
 set DBGLINKOPT=/DEBUG
+
+if not "%1"=="x64" if not "%1"=="x86" goto :eof
+call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" %1
 ```
 
 ## `makefile`

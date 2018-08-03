@@ -1,7 +1,3 @@
-REM Make sure this points to vcvarsall.bat in your version of Visual Studio
-REM You could replace this with a shortcut or another batch file
-call vcvarsall.bat %1
-
 REM Output file name
 set APP=app.exe
 
@@ -53,12 +49,9 @@ REM Command line options for debug mode
 set DBGCOMPOPT=/Zi
 set DBGLINKOPT=/DEBUG
 
-goto :eof
+REM Skip vcvarsall.bat if in clean mode
+if not "%1"=="x64" if not "%1"=="x86" goto :eof
 
-:allcpp
-for /f %%F in ('dir /b "!%~1!"') do (
-    if "%%~xF"==".cpp" set %~2=!%~2! %%F
-    if "%%~xF"==".cc" set %~2=!%~2! %%F
-    if "%%~xF"==".c" set %~2=!%~2! %%F
-)
-EXIT /B
+REM Make sure this points to vcvarsall.bat in your version of Visual Studio
+REM You could replace this with a shortcut or another batch file
+call vcvarsall.bat %1

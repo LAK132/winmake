@@ -10,14 +10,14 @@ if not "%mode%"=="debug" if not "%mode%"=="release" if not "%mode%"=="clean" (
     goto usage
 )
 
+call makelist.bat %target%
+
 if "%mode%"=="clean" goto clean
 
 if not "%target%"=="x86" if not "%target%"=="x64" (
     echo unknown target "%target%"
     goto usage
 )
-
-call makelist.bat %target%
 
 :compile
 echo Compiling in %mode% mode for %target%
