@@ -15,12 +15,12 @@ if not "%mode%"=="debug" if not "%mode%"=="release" if not "%mode%"=="clean" (\n
     echo unknown mode "%mode%"\n\
     goto usage\n\
 )\n\n\
+call makelist.bat %target%\n\n\
 if "%mode%"=="clean" goto clean\n\n\
 if not "%target%"=="x86" if not "%target%"=="x64" (\n\
     echo unknown target "%target%"\n\
     goto usage\n\
 )\n\n\
-call makelist.bat %target%\n\n\
 :compile\n\
 echo Compiling in %mode% mode for %target%\n\
 title Compiler\n\n\
@@ -125,9 +125,7 @@ if makeNewFile:
 
     with open('makelist.bat' if is_windows else 'makefile', 'w+') as fyle:
         fyle.seek(0)
-        if is_windows:
-            fyle.write('call "'+compiler+'" %1\n\n')
-        else:
+        if not is_windows:
             fyle.write(SetVar('CXX', compiler)+'\n')
         fyle.write(SetVar('CPPVER', cpp_ver)+'\n')
         fyle.write(SetVar('APP', app_name)+'\n')
@@ -179,7 +177,9 @@ if makeNewFile:
                 fyle.write(f+' ')
             fyle.write('\n')
             fyle.write(SetVar(targname+'_INC', raw_input('Source "'+target+'" include directories (optional): ')+'\n'))
-        if not is_windows:
+        if is_windows:
+            fyle.write('if not "%1"=="x64" if not "%1"=="x86" goto :eof\n\ncall "'+compiler+'" %1')
+        else:
             fyle.write(
 '# -------------------\n\
 # Start build script:\n\
