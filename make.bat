@@ -29,6 +29,7 @@ set LIBDIR=!LIBDIR!\%target%
 set OUT=%OUTDIR%\%APP%
 
 if not exist %OUTDIR% mkdir %OUTDIR%
+if not exist %BINDIR% mkdir %BINDIR%
 
 set _LIBS=
 for %%L in (%LIBS%) do (
