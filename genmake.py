@@ -28,7 +28,8 @@ REM some windows functions are pedantic about \\\n\
 set OUTDIR=!OUTDIR!\\%mode%\\%target%\n\
 set LIBDIR=!LIBDIR!\\%target%\n\
 set OUT=%OUTDIR%\\%APP%\n\n\
-if not exist %OUTDIR% mkdir %OUTDIR%\n\n\
+if not exist %OUTDIR% mkdir %OUTDIR%\n\
+if not exist %BINDIR% mkdir %BINDIR%\n\n\
 set _LIBS=\n\
 for %%L in (%LIBS%) do (\n\
     set _LIBS=!_LIBS! %LIBDIR%/%%L\n\
