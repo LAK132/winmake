@@ -21,9 +21,12 @@ if not "%mode%"=="debug" if not "%mode%"=="release" if not "%mode%"=="clean" (
     goto usage
 )
 
-call makelist.bat %target%
+if "%mode%"=="clean" (
+    call makelist.bat clean
+    goto clean
+)
 
-if "%mode%"=="clean" goto clean
+call makelist.bat %target%
 
 if not "%target%"=="x86" if not "%target%"=="x64" (
     echo unknown target "%target%"
@@ -53,7 +56,7 @@ if "%mode%"=="debug" goto debug
 if "%mode%"=="release" goto release
 
 :usage
-echo compile: "make [debug/release] [x86/x64]"
+echo compile: "make [debug/release] [x86/x64] [ /multi/incremental/multi incremental]"
 echo clean: "make clean"
 goto :eof
 
@@ -78,41 +81,35 @@ set LINKOPT=!LINKOPT! %DBGLINKOPT%
 goto run
 
 :run
+set INCREMENTAL=0
+set MULTI=0
+if "%3"=="incremental" set INCREMENTAL=1
+if "%4"=="incremental" set INCREMENTAL=1
+if "%3"=="multi" set MULTI=1
+if "%4"=="multi" set MULTI=1
+
 set allobj=
-if "%3"=="incremental" (
-    for %%P in (%SOURCES%) do (
-        for %%O in (!%%P_OBJ!) do (
-            set out_obj=%BINDIR%/%mode%/%target%/%%~nO.obj
-            set inp_src=!%%P_SRC!/%%O
-            set allobj=!allobj! !out_obj!
-
-            set diff="0"
-            for /f "delims=" %%A in ('cscript /nologo /e:jscript "%~f0" !out_obj! !inp_src!') do (
-                set diff=%%A
+for %%P in (%SOURCES%) do (
+    set inp_src=
+    set inc=
+    set bin_dir=%BINDIR%\%mode%\%target%\%%P
+    if not exist !bin_dir! mkdir !bin_dir!
+    for %%O in (!%%P_OBJ!) do (
+        if "%INCREMENTAL%"=="1" (
+            for /f "delims=" %%A in ('cscript /nologo /e:jscript "%~f0" !bin_dir!\%%~nO.obj !%%P_SRC!\%%O') do (
+                if %%A LSS 0 set inp_src=!inp_src! !%%P_SRC!\%%O
             )
-
-            if !diff! LSS 0 (
-                set inc=
-                for %%I in (!%%P_INC!) do (set inc=!inc! /I%%I)
-                call cl -std:%CPPVER% %COMPOPT% /Fo:!out_obj! /c !inp_src! !inc!
-            )
-        )
+        ) else set inp_src=!inp_src! !%%P_SRC!\%%O
+        set allobj=!allobj! !bin_dir!\%%~nO.obj
     )
-) else (
-    for %%P in (%SOURCES%) do (
-        set inp_src=
-        set inc=
-        for %%O in (!%%P_OBJ!) do (
-            set inp_src=!inp_src! !%%P_SRC!/%%O
-            set allobj=!allobj! %BINDIR%/%mode%/%target%/%%~nO.obj
-        )
-        for %%I in (!%%P_INC!) do (
-            set inc=!inc! /I%%I
-        )
-        if "%3"=="multi" (
-            call cl -std:%CPPVER% %COMPOPT% /MP /Fo:%BINDIR%/%mode%/%target%/ /c !inp_src! !inc!
+    for %%I in (!%%P_INC!) do (
+        set inc=!inc! /I%%I
+    )
+    if not "!inp_src!"=="" (
+        if "%MULTI%"=="1" (
+            call cl -std:%CPPVER% %COMPOPT% /MP /Fo:!bin_dir!\ /c !inp_src! !inc!
         ) else (
-            call cl -std:%CPPVER% %COMPOPT% /Fo:%BINDIR%/%mode%/%target%/ /c !inp_src! !inc!
+            call cl -std:%CPPVER% %COMPOPT% /Fo:!bin_dir!\ /c !inp_src! !inc!
         )
     )
 )
