@@ -26,6 +26,9 @@ To compile an x64 debug incrementally
 To compile an x64 debug with the multi-thread option (/MP)
 >``> make debug x64 multi``
 
+Multi and incremental can be used at the same time (in any order)
+>``>make debug x64 multi incremental``
+
 To clean (delete) the object folder
 >``> make clean``
 
