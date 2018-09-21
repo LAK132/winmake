@@ -2,7 +2,43 @@
 
 Build scripts with no external software dependencies
 
-`make.bat` compares the built object last-modified-date times with their repective source files to see if they need to be rebuilt (similar to GNU-make), this should result in a compile time speed up for large projects
+`make.bat` with the `incremental` option compares the built object last-modified-date times with their repective source files to see if they need to be rebuilt (similar to GNU-make), this should result in a compile time speed up for large projects with very few changes. If not using the `incremental` option, `mutli` is recommended (where possible), this option applies the /MP compiler option on MSVC
+
+# Running
+
+## Windows
+
+To compile an x86 release
+>``> make release x86``
+
+To compile an x64 release
+>``> make release x64``
+
+To compile an x86 debug
+>``> make debug x86``
+
+To compile an x64 debug
+>``> make debug x64``
+
+To compile an x64 debug incrementally
+>``> make debug x64 incremental``
+
+To compile an x64 debug with the multi-thread option (/MP)
+>``> make debug x64 multi``
+
+To clean (delete) the object folder
+>``> make clean``
+
+## Linux/etc...
+
+To compile a release 
+>``> make release``
+
+To compile a debug 
+>``> make debug``
+
+To clean out the object folder 
+>``> make clean``
 
 # Setup
 
@@ -12,6 +48,7 @@ Simply run `genmake.py`, it will ask you a bunch of questions about the project 
 
 ```
 > python genmake.py
+Create new makelist.bat? (Will overwrite existing file) [y/n]: y
 Output name (ie app.exe or lib.dll): app.exe
 Output directory: out
 Binaries directory: bin
@@ -25,7 +62,6 @@ Debug mode compiler options (optional): /Zi
 Debug mode linker options (optional): /DEBUG
 Release mode compiler options (optional): /DNDEBUG
 Release mode linker options (optional): 
-Create new make.bat? (Will overwrite existing file) [y/n]: y
 Include source "src"? [y/n]: y
 Include source "src.bak"? [y/n]: n
 Include source "lib"? [y/n]: y
@@ -75,7 +111,7 @@ Copy `make.bat` and `makelist.bat` (and `makefile` for cross-platform projects) 
 
 Example:
 
-```
+``` bat
 set APP=app.exe
 set OUTDIR=out
 set BINDIR=bin
@@ -92,13 +128,13 @@ set target2_SRC=src\some\other\folders
 set target2_OBJ=file.c anotherCppFile.cpp
 set target2_INC=include include\qwerty
 
-set target3_SRC=src C:\absolute\directory
+set target3_SRC=C:\absolute\directory
 set target3_OBJ=main.cpp other_main.cpp another.cpp
 set target3_INC=include ..\external_folder
 
 set CPPVER=c++latest
 
-set COMPOPT=/nologo /EHa /MD /MP
+set COMPOPT=/nologo /EHa /MD
 set LINKOPT=/nologo
 
 set RELCOMPOPT=/DNDEBUG
@@ -117,7 +153,8 @@ The makefile is laid out in a similar way to `makelist.bat`, the only difference
 
 Example:
 
-```
+``` make
+# makelist
 CXX = g++
 APP = app
 OUTDIR = out
@@ -136,44 +173,23 @@ RELCOMPOPT =
 DBGLINKOPT =
 DBGCOMPOPT = -g
 
-ALL_OBJ = $(foreach src,$(SOURCES),$(foreach obj,$($(src)_OBJ),$(BINDIR)/$(obj).o))
+# make script
+ALL_OBJ = $(foreach src,$(SOURCES),$(foreach obj,$($(src)_OBJ),$(BINDIR)/$(src)$(obj).o))
 .PHONY: debug
 debug: $(foreach obj,$(ALL_OBJ),debug-$(obj))
-	$(call LINK_TEMPLATE,$(DBGLINKOPT))
+	$(call LINK_TEMPLATE,$(LINKOPT) $(DBGLINKOPT),debug)
 release: $(foreach obj,$(ALL_OBJ),release-$(obj))
-	$(call LINK_TEMPLATE,$(RELLINKOPT))
+	$(call LINK_TEMPLATE,$(LINKOPT) $(RELLINKOPT),release)
 define LINK_TEMPLATE =
-$(CXX) -std=$(CPPVER) -o $(OUTDIR)/$(APP) $(ALL_OBJ) $(foreach libdir,$(LIBDIR),-L$(libdir)) $(foreach lib,$(LIBS),-l$(lib)) $(COMPOPT) $(1)
+$(CXX) -std=$(CPPVER) -o $(OUTDIR)/$(2)/$(APP) $(ALL_OBJ) $(foreach libdir,$(LIBDIR),-L$(libdir)) $(foreach lib,$(LIBS),-l$(lib)) $(COMPOPT) $(1)
 endef
 define COMPILE_TEMPLATE =
-debug-$(2)/$(3).o: $(1)/$(3)
-	$(CXX) -std=$(CPPVER) -c -o $(2)/$(3).o $(1)/$(3) $(4) $(DBGCOMPOPT)
-release-$(2)/$(3).o: $(1)/$(3)
-	$(CXX) -std=$(CPPVER) -c -o $(2)/$(3).o $(1)/$(3) $(4) $(RELCOMPOPT)
+debug-$(2)$(3).o: $(1)/$(3)
+	$(CXX) -std=$(CPPVER) -c -o $(2)$(3).o $(1)/$(3) $(4) $(COMPOPT) $(DBGCOMPOPT)
+release-$(2)$(3).o: $(1)/$(3)
+	$(CXX) -std=$(CPPVER) -c -o $(2)$(3).o $(1)/$(3) $(4) $(COMPOPT) $(RELCOMPOPT)
 endef
-$(foreach src,$(SOURCES),$(foreach obj,$($(src)_OBJ),$(eval $(call COMPILE_TEMPLATE,$($(src)_SRC),$(BINDIR),$(obj),$(foreach inc,$($(src)_INC),-I$(inc))))))
+$(foreach src,$(SOURCES),$(foreach obj,$($(src)_OBJ),$(eval $(call COMPILE_TEMPLATE,$($(src)_SRC),$(BINDIR)/$(src),$(obj),$(foreach inc,$($(src)_INC),-I$(inc))))))
 clean:
 	rm -f $(ALL_OBJ)
 ```
-
-# Running
-
-## Windows
-
-To compile an x86 release ``> make release x86``
-
-To compile an x64 release ``> make release x64``
-
-To compile an x86 debug ``> make debug x86``
-
-To compile an x64 debug ``> make debug x64``
-
-To clean out the object folder ``> make clean``
-
-## Linux/etc...
-
-To compile a release ``> make release``
-
-To compile a debug ``> make debug``
-
-To clean out the object folder ``> make clean``

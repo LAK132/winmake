@@ -3,80 +3,136 @@ import os, sys
 
 is_windows = platform == 'win32'
 
+inp = input
+if not sys.version_info >= (3, 0):
+    inp = raw_input
+
 if is_windows and not os.path.isfile('make.bat'):
     with open('make.bat', 'w+') as fyle:
-        fyle.write(
-'@if (@a==@b) @end /*\n\
-@echo off\n\
-SetLocal EnableDelayedExpansion\n\n\
-set mode=%1\n\
-set target=%2\n\n\
-if not "%mode%"=="debug" if not "%mode%"=="release" if not "%mode%"=="clean" (\n\
-    echo unknown mode "%mode%"\n\
-    goto usage\n\
-)\n\n\
-call makelist.bat %target%\n\n\
-if "%mode%"=="clean" goto clean\n\n\
-if not "%target%"=="x86" if not "%target%"=="x64" (\n\
-    echo unknown target "%target%"\n\
-    goto usage\n\
-)\n\n\
-:compile\n\
-echo Compiling in %mode% mode for %target%\n\
-title Compiler\n\n\
-REM some windows functions are pedantic about \\\n\
-set OUTDIR=!OUTDIR!\\%mode%\\%target%\n\
-set LIBDIR=!LIBDIR!\\%target%\n\
-set OUT=%OUTDIR%\\%APP%\n\n\
-if not exist %OUTDIR% mkdir %OUTDIR%\n\
-if not exist %BINDIR% mkdir %BINDIR%\n\n\
-set _LIBS=\n\
-for %%L in (%LIBS%) do (\n\
-    set _LIBS=!_LIBS! %LIBDIR%/%%L\n\
-)\n\n\
-if "%mode%"=="debug" goto debug\n\
-if "%mode%"=="release" goto release\n\n\
-:usage\n\
-echo compile: "make [debug/release] [x86/x64]"\n\
-echo clean: "make clean"\n\
-goto :eof\n\n\
-:clean\n\
-for /f %%F in (\'dir /b %BINDIR%\') do (\n\
-    if "%%~xF"==".obj" del %BINDIR%\\%%F\n\
-)\n\
-goto :eof\n\n\
-:release\n\
-set COMPOPT=!COMPOPT! %RELCOMPOPT%\n\
-set LINKOPT=!LINKOPT! %RELLINKOPT%\n\
-goto run\n\n\
-:debug\n\
-set COMPOPT=!COMPOPT! %DBGCOMPOPT%\n\
-set LINKOPT=!LINKOPT! %DBGLINKOPT%\n\
-goto run\n\n\
-:run\n\
-set allobj=\n\
-for %%P in (%SOURCES%) do (\n\
-    for %%O in (!%%P_OBJ!) do (\n\
-        set out_obj=%BINDIR%/%%O%mode%%target%.obj\n\
-        set inp_src=!%%P_SRC!/%%O\n\
-        set allobj=!allobj! !out_obj!\n\n\
-        set diff="0"\n\
-        for /f "delims=" %%A in (\'cscript /nologo /e:jscript "%~f0" !out_obj! !inp_src!\') do (\n\
-            set diff=%%A\n\
-        )\n\n\
-        if !diff! LSS 0 (\n\
-            set inc=\n\
-            for %%I in (!%%P_INC!) do (set inc=!inc! /I%%I)\n\
-            call cl -std:%CPPVER% %COMPOPT% /Fo:!out_obj! /c !inp_src! !inc!\n\
-        )\n\
-    )\n\
-)\n\n\
-call link %LINKOPT% /out:%OUT% %allobj% %_LIBS%\n\
-if not "%LIBDIR%"=="\\%target%" for /f %%F in (\'dir /b %LIBDIR%\') do (\n\
-    if "%%~xF"==".dll" echo f | xcopy /y %LIBDIR%\\%%F %OUTDIR%\\%%F\n\
-)\n\
-goto :eof\n\n\
-*/ var fs=new ActiveXObject("Scripting.FileSystemObject");var date1=0;if(fs.FileExists(WSH.Arguments(0))){date1=Date.parse(fs.GetFile(WSH.Arguments(0)).DateLastModified);}var date2=0;if(fs.FileExists(WSH.Arguments(1))){date2=Date.parse(fs.GetFile(WSH.Arguments(1)).DateLastModified);}WSH.Echo(date1-date2);')
+        fyle.write(r"""@if (@a==@b) @end /*
+@echo off
+SetLocal EnableDelayedExpansion
+
+set mode=%1
+set target=%2
+
+if not "%mode%"=="debug" if not "%mode%"=="release" if not "%mode%"=="clean" (
+    echo unknown mode "%mode%"
+    goto usage
+)
+
+call makelist.bat %target%
+
+if "%mode%"=="clean" goto clean
+
+if not "%target%"=="x86" if not "%target%"=="x64" (
+    echo unknown target "%target%"
+    goto usage
+)
+
+:compile
+echo Compiling in %mode% mode for %target%
+title Compiler
+
+REM some windows functions are pedantic about \
+set OUTDIR=!OUTDIR!\%mode%\%target%
+set LIBDIR=!LIBDIR!\%target%
+set OUT=%OUTDIR%\%APP%
+
+if not exist %OUTDIR% mkdir %OUTDIR%
+if not exist %BINDIR% mkdir %BINDIR%
+if not exist %BINDIR%\%mode% mkdir %BINDIR%\%mode%
+if not exist %BINDIR%\%mode%\%target% mkdir %BINDIR%\%mode%\%target%
+
+set _LIBS=
+for %%L in (%LIBS%) do (
+    set _LIBS=!_LIBS! %LIBDIR%/%%L
+)
+
+if "%mode%"=="debug" goto debug
+if "%mode%"=="release" goto release
+
+:usage
+echo compile: "make [debug/release] [x86/x64]"
+echo clean: "make clean"
+goto :eof
+
+:clean
+if not exist %BINDIR% goto :eof
+pushd %BINDIR%
+del /f /q /s *.* >NUL
+popd
+:cleanrd
+RD /s /q %BINDIR%
+if exist %BINDIR% goto cleanrd
+goto :eof
+
+:release
+set COMPOPT=!COMPOPT! %RELCOMPOPT%
+set LINKOPT=!LINKOPT! %RELLINKOPT%
+goto run
+
+:debug
+set COMPOPT=!COMPOPT! %DBGCOMPOPT%
+set LINKOPT=!LINKOPT! %DBGLINKOPT%
+goto run
+
+:run
+set allobj=
+if "%3"=="incremental" (
+    for %%P in (%SOURCES%) do (
+        for %%O in (!%%P_OBJ!) do (
+            set out_obj=%BINDIR%/%mode%/%target%/%%~nO.obj
+            set inp_src=!%%P_SRC!/%%O
+            set allobj=!allobj! !out_obj!
+
+            set diff="0"
+            for /f "delims=" %%A in ('cscript /nologo /e:jscript "%~f0" !out_obj! !inp_src!') do (
+                set diff=%%A
+            )
+
+            if !diff! LSS 0 (
+                set inc=
+                for %%I in (!%%P_INC!) do (set inc=!inc! /I%%I)
+                call cl -std:%CPPVER% %COMPOPT% /Fo:!out_obj! /c !inp_src! !inc!
+            )
+        )
+    )
+) else (
+    for %%P in (%SOURCES%) do (
+        set inp_src=
+        set inc=
+        for %%O in (!%%P_OBJ!) do (
+            set inp_src=!inp_src! !%%P_SRC!/%%O
+            set allobj=!allobj! %BINDIR%/%mode%/%target%/%%~nO.obj
+        )
+        for %%I in (!%%P_INC!) do (
+            set inc=!inc! /I%%I
+        )
+        if "%3"=="multi" (
+            call cl -std:%CPPVER% %COMPOPT% /MP /Fo:%BINDIR%/%mode%/%target%/ /c !inp_src! !inc!
+        ) else (
+            call cl -std:%CPPVER% %COMPOPT% /Fo:%BINDIR%/%mode%/%target%/ /c !inp_src! !inc!
+        )
+    )
+)
+
+call link %LINKOPT% /out:%OUT% %allobj% %_LIBS%
+if not "%LIBDIR%"=="\%target%" for /f %%F in ('dir /b %LIBDIR%') do (
+    if "%%~xF"==".dll" echo f | xcopy /y %LIBDIR%\%%F %OUTDIR%\%%F
+)
+goto :eof
+*/
+var fs = new ActiveXObject("Scripting.FileSystemObject");
+var date1 = 0;
+if(fs.FileExists(WSH.Arguments(0))){
+    date1=Date.parse(fs.GetFile(WSH.Arguments(0)).DateLastModified);
+}
+var date2 = 0;
+if(fs.FileExists(WSH.Arguments(1))){
+    date2 = Date.parse(fs.GetFile(WSH.Arguments(1)).DateLastModified);
+}
+WSH.Echo(date1 - date2);""")
 
 def SetVar(key, value=None):
     if is_windows:
@@ -86,7 +142,7 @@ def SetVar(key, value=None):
 
 makeNewFile = False
 while True:
-    res = raw_input('Create new make{}? (Will overwrite existing file) [y/n]: '.format('.bat' if is_windows else 'file'))
+    res = inp('Create new make{}? (Will overwrite existing file) [y/n]: '.format('list.bat' if is_windows else 'file'))
     if res.startswith('y') or res.startswith('Y'):
         makeNewFile = True
         break
@@ -94,35 +150,35 @@ while True:
         makeNewFile = False
         break
     else:
-        print 'Unknown response "'+res+'"'
+        print('Unknown response "'+res+'"')
 
 if makeNewFile:
-    app_name = raw_input('Output name (ie app{} or lib{}): '.format(
+    app_name = inp('Output name (ie app{} or lib{}): '.format(
         '.exe' if is_windows else '', 
         '.dll' if is_windows else '.so'
     )) or ('app.exe' if is_windows else 'app')
 
-    out_dir = raw_input('Output directory: ') or 'out'
-    bin_dir = raw_input('Binaries directory: ') or 'bin'
+    out_dir = inp('Output directory: ') or 'out'
+    bin_dir = inp('Binaries directory: ') or 'bin'
 
-    lib_dir = raw_input('Library director{} (optional): '.format('y' if is_windows else 'ies'))
-    libs = raw_input('Libraries (optional): ')
+    lib_dir = inp('Library director{} (optional): '.format('y' if is_windows else 'ies'))
+    libs = inp('Libraries (optional): ')
 
     compiler = ''
     if is_windows:
-        compiler = raw_input('Path to vcvarsall.bat (optional if in PATH): ') or 'vcvarsall.bat'
+        compiler = inp('Path to vcvarsall.bat (optional if in PATH): ') or 'vcvarsall.bat'
     else:
-        compiler = raw_input('Compiler (ie g++): ') or 'g++'
-    cpp_ver = raw_input('C++ version (ie c++11{}): '.format(' or c++latest' if is_windows else '')) or ('c++latest' if is_windows else 'c++11')
+        compiler = inp('Compiler (ie g++): ') or 'g++'
+    cpp_ver = inp('C++ version (ie c++11{}): '.format(' or c++latest' if is_windows else '')) or ('c++latest' if is_windows else 'c++11')
 
-    comp_opt = raw_input('Compiler options (optional): ')
-    link_opt = raw_input('Linker options (optional): ')
+    comp_opt = inp('Compiler options (optional): ')
+    link_opt = inp('Linker options (optional): ')
 
-    dbg_comp_opt = raw_input('Debug mode compiler options (optional): ')
-    dbg_link_opt = raw_input('Debug mode linker options (optional): ')
+    dbg_comp_opt = inp('Debug mode compiler options (optional): ')
+    dbg_link_opt = inp('Debug mode linker options (optional): ')
 
-    rel_comp_opt = raw_input('Release mode compiler options (optional): ')
-    rel_link_opt = raw_input('Release mode linker options (optional): ')
+    rel_comp_opt = inp('Release mode compiler options (optional): ')
+    rel_link_opt = inp('Release mode linker options (optional): ')
 
     with open('makelist.bat' if is_windows else 'makefile', 'w+') as fyle:
         fyle.seek(0)
@@ -155,14 +211,14 @@ if makeNewFile:
                 includeTarg = False
                 target = dirName[2:] if dirName.startswith('.\\') and len(dirName) > 2 else dirName
                 while True:
-                    res = raw_input('Include source "'+target+'"? [y/n]: ')
+                    res = inp('Include source "'+target+'"? [y/n]: ')
                     if res.startswith('y') or res.startswith('Y'):
                         includeTarg = True
                         break
                     elif res.startswith('n') or res.startswith('N'):
                         break
                     else:
-                        print 'Unknown response "'+res+'"'
+                        print('Unknown response "'+res+'"')
                 if includeTarg:
                     targets.append(target)
             if len(dirs) == 0:
@@ -177,30 +233,29 @@ if makeNewFile:
             for f in [f for f in os.listdir(target) if f.endswith('.cpp') or f.endswith('.cxx') or f.endswith('.c')]:
                 fyle.write(f+' ')
             fyle.write('\n')
-            fyle.write(SetVar(targname+'_INC', raw_input('Source "'+target+'" include directories (optional): ')+'\n'))
+            fyle.write(SetVar(targname+'_INC', inp('Source "'+target+'" include directories (optional): ')+'\n'))
         if is_windows:
             fyle.write('if not "%1"=="x64" if not "%1"=="x86" goto :eof\n\ncall "'+compiler+'" %1')
         else:
-            fyle.write(
-'# -------------------\n\
-# Start build script:\n\
-# -------------------\n\
-ALL_OBJ = $(foreach src,$(SOURCES),$(foreach obj,$($(src)_OBJ),$(BINDIR)/$(obj).o))\n\n\
-.PHONY: debug\n\
-debug: $(foreach obj,$(ALL_OBJ),debug-$(obj))\n\
-    $(call LINK_TEMPLATE,$(DBGLINKOPT))\n\n\
-release: $(foreach obj,$(ALL_OBJ),release-$(obj))\n\
-    $(call LINK_TEMPLATE,$(RELLINKOPT))\n\n\
-define LINK_TEMPLATE =\n\
-$(CXX) -std=$(CPPVER) -o $(OUTDIR)/$(APP) $(ALL_OBJ) $(foreach libdir,$(LIBDIR),-L$(libdir)) $(foreach lib,$(LIBS),-l$(lib)) $(COMPOPT) $(1)\n\
-endef\n\n\
-define COMPILE_TEMPLATE =\n\
-debug-$(2)/$(3).o: $(1)/$(3)\n\
-    $(CXX) -std=$(CPPVER) -c -o $(2)/$(3).o $(1)/$(3) $(4) $(DBGCOMPOPT)\n\
-release-$(2)/$(3).o: $(1)/$(3)\n\
-    $(CXX) -std=$(CPPVER) -c -o $(2)/$(3).o $(1)/$(3) $(4) $(RELCOMPOPT)\n\
-endef\n\n\
-$(foreach src,$(SOURCES),$(foreach obj,$($(src)_OBJ),$(eval $(call COMPILE_TEMPLATE,$($(src)_SRC),$(BINDIR),$(obj),$(foreach inc,$($(src)_INC),-I$(inc))))))\n\n\
-clean:\n\
-    rm -f $(ALL_OBJ)')
+            fyle.write(r"""# -------------------
+# Start build script:
+# -------------------
+ALL_OBJ = $(foreach src,$(SOURCES),$(foreach obj,$($(src)_OBJ),$(BINDIR)/$(src)$(obj).o))
+.PHONY: debug
+debug: $(foreach obj,$(ALL_OBJ),debug-$(obj))
+	$(call LINK_TEMPLATE,$(LINKOPT) $(DBGLINKOPT),debug)
+release: $(foreach obj,$(ALL_OBJ),release-$(obj))
+	$(call LINK_TEMPLATE,$(LINKOPT) $(RELLINKOPT),release)
+define LINK_TEMPLATE =
+$(CXX) -std=$(CPPVER) -o $(OUTDIR)/$(2)/$(APP) $(ALL_OBJ) $(foreach libdir,$(LIBDIR),-L$(libdir)) $(foreach lib,$(LIBS),-l$(lib)) $(COMPOPT) $(1)
+endef
+define COMPILE_TEMPLATE =
+debug-$(2)$(3).o: $(1)/$(3)
+	$(CXX) -std=$(CPPVER) -c -o $(2)$(3).o $(1)/$(3) $(4) $(COMPOPT) $(DBGCOMPOPT)
+release-$(2)$(3).o: $(1)/$(3)
+	$(CXX) -std=$(CPPVER) -c -o $(2)$(3).o $(1)/$(3) $(4) $(COMPOPT) $(RELCOMPOPT)
+endef
+$(foreach src,$(SOURCES),$(foreach obj,$($(src)_OBJ),$(eval $(call COMPILE_TEMPLATE,$($(src)_SRC),$(BINDIR)/$(src),$(obj),$(foreach inc,$($(src)_INC),-I$(inc))))))
+clean:
+	rm -f $(ALL_OBJ)""")
         fyle.truncate()
