@@ -33,27 +33,27 @@ RELCOMPOPT =
 DBGLINKOPT =
 DBGCOMPOPT = -g
 
-ALL_OBJ = $(foreach src,$(SOURCES),$(foreach obj,$($(src)_OBJ),$(BINDIR)/$(obj).o))
+ALL_OBJ = $(foreach src,$(SOURCES),$(foreach obj,$($(src)_OBJ),$(BINDIR)/$(src)$(obj).o))
 
 .PHONY: debug
 debug: $(foreach obj,$(ALL_OBJ),debug-$(obj))
-	$(call LINK_TEMPLATE,$(DBGLINKOPT))
+	$(call LINK_TEMPLATE,$(LINKOPT) $(DBGLINKOPT),debug)
 
 release: $(foreach obj,$(ALL_OBJ),release-$(obj))
-	$(call LINK_TEMPLATE,$(RELLINKOPT))
+	$(call LINK_TEMPLATE,$(LINKOPT) $(RELLINKOPT),release)
 
 define LINK_TEMPLATE =
-$(CXX) -std=$(CPPVER) -o $(OUTDIR)/$(APP) $(ALL_OBJ) $(foreach libdir,$(LIBDIR),-L$(libdir)) $(foreach lib,$(LIBS),-l$(lib)) $(COMPOPT) $(1)
+$(CXX) -std=$(CPPVER) -o $(OUTDIR)/$(2)/$(APP) $(ALL_OBJ) $(foreach libdir,$(LIBDIR),-L$(libdir)) $(foreach lib,$(LIBS),-l$(lib)) $(COMPOPT) $(1)
 endef
 
 define COMPILE_TEMPLATE =
-debug-$(2)/$(3).o: $(1)/$(3)
-	$(CXX) -std=$(CPPVER) -c -o $(2)/$(3).o $(1)/$(3) $(4) $(DBGCOMPOPT)
-release-$(2)/$(3).o: $(1)/$(3)
-	$(CXX) -std=$(CPPVER) -c -o $(2)/$(3).o $(1)/$(3) $(4) $(RELCOMPOPT)
+debug-$(2)$(3).o: $(1)/$(3)
+	$(CXX) -std=$(CPPVER) -c -o $(2)$(3).o $(1)/$(3) $(4) $(COMPOPT) $(DBGCOMPOPT)
+release-$(2)$(3).o: $(1)/$(3)
+	$(CXX) -std=$(CPPVER) -c -o $(2)$(3).o $(1)/$(3) $(4) $(COMPOPT) $(RELCOMPOPT)
 endef
 
-$(foreach src,$(SOURCES),$(foreach obj,$($(src)_OBJ),$(eval $(call COMPILE_TEMPLATE,$($(src)_SRC),$(BINDIR),$(obj),$(foreach inc,$($(src)_INC),-I$(inc))))))
+$(foreach src,$(SOURCES),$(foreach obj,$($(src)_OBJ),$(eval $(call COMPILE_TEMPLATE,$($(src)_SRC),$(BINDIR)/$(src),$(obj),$(foreach inc,$($(src)_INC),-I$(inc))))))
 
 clean:
 	rm -f $(ALL_OBJ)
