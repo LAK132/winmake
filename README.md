@@ -49,7 +49,7 @@ To clean out the object folder
 
 ## The Easy Way (genmake)
 
-Simply run `genmake.py`, it will ask you a bunch of questions about the project and build a `make.bat` and `makelist.bat` or `makefile` to match. It will attempt to find `.c`, `.cxx` and `.cpp` files within the project to add to the source lists
+Simply run `genmake.py`, it will ask you a bunch of questions about the project and build a `make.bat` and `makelist.bat` or `Makefile` to match. It will attempt to find `.c`, `.cxx` and `.cpp` files within the project to add to the source lists
 
 ```
 > python genmake.py
@@ -78,7 +78,7 @@ Source "lib" include directories (optional): include lib ../../external/dependec
 
 ## The Hard Way
 
-Copy `make.bat` and `makelist.bat` (and `makefile` for cross-platform projects) into the root directory of your project and edit them manually (instructions below)
+Copy `make.bat` and `makelist.bat` (and `Makefile` for cross-platform projects) into the root directory of your project and edit them manually (instructions below)
 
 ## `Makefile`
 
@@ -121,6 +121,8 @@ Copy `make.bat` and `makelist.bat` (and `makefile` for cross-platform projects) 
 `DBGLINKOPT` is the linker flags to use in only `debug` mode
 
 `CXX` should be your compiler (Linux) or changed to point to `vcvarsall.bat` in your version of Visual Studio (Windows). If `vcvarsall.bat` is in your system PATH variable then you can leave it as `vcvarsall.bat`
+
+`# BUILD SCRIPT` this tells `make.bat` to stop reading the `Makefile`, ignored by GNU-make
 
 Example:
 
