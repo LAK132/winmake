@@ -12,7 +12,7 @@ if "%1"=="clean" (
     goto :eof
 )
 for /f "delims=" %%A in ('cscript /nologo /e:jscript "%~f0" %*') do (
-    call cmd /c %%A
+    call %%A
 )
 goto :eof
 */
@@ -79,8 +79,10 @@ if (mode == "clean") {
     make["LIBS"] = make["LIBS"].toArgs();
     make["_LIBS"] = "";
     for (var lib in make["LIBS"]) {
-        make["LIBS"][lib] = make["LIBDIR"]+"\\"+make["LIBS"][lib];
-        make["_LIBS"] = make["_LIBS"]+" "+make["LIBS"][lib];
+        if (make["LIBS"][lib]) {
+            make["LIBS"][lib] = make["LIBDIR"]+"\\"+make["LIBS"][lib];
+            make["_LIBS"] = make["_LIBS"]+" "+make["LIBS"][lib];
+        }
     }
     make["SOURCES"] = make["SOURCES"].toArgs();
     var sources = {};
@@ -126,20 +128,22 @@ if (mode == "clean") {
         var inp_src = "";
         var inc = "";
         var bin_dir = make["BINDIR"]+"\\"+mode+"\\"+target+"\\"+_src;
-        WSH.Echo("if not exist "+bin_dir+" mkdir "+bin_dir);
+        WSH.Echo("cmd /c if not exist "+bin_dir+" mkdir "+bin_dir);
         for (var _obj in src["OBJ"]) {
             var obj = src["OBJ"][_obj];
-            var objOut = bin_dir+"\\"+obj.substring(0, obj.lastIndexOf("."))+".obj";
-            var add_src = !incremental;
-            if (incremental) {
-                for (var _dep in src["DEPS"]) {
-                    var dep = src["DEPS"][_dep];
-                    if (fileCompare(objOut, dep) < 0) add_src = true;
-                    if (add_src) break;
+            if (obj) {
+                var objOut = bin_dir+"\\"+obj.substring(0, obj.lastIndexOf("."))+".obj";
+                var add_src = !incremental;
+                if (incremental) {
+                    for (var _dep in src["DEPS"]) {
+                        var dep = src["DEPS"][_dep];
+                        if (fileCompare(objOut, dep) < 0) add_src = true;
+                        if (add_src) break;
+                    }
                 }
+                if (add_src) inp_src = inp_src+" "+src["SRC"]+"\\"+obj;
+                all_obj = all_obj+" "+objOut;
             }
-            if (add_src) inp_src = inp_src+" "+src["SRC"]+"\\"+obj;
-            all_obj = all_obj+" "+objOut;
         }
         for (var _inc in src["INC"]) {
             inc = inc+" /I"+src["INC"][_inc];
@@ -155,10 +159,10 @@ if (mode == "clean") {
             }
         }
     }
-    WSH.Echo("if not exist "+make["OUTDIR"]+" mkdir "+make["OUTDIR"]);
+    WSH.Echo("cmd /c if not exist "+make["OUTDIR"]+" mkdir "+make["OUTDIR"]);
     WSH.Echo("link "+make["LINKOPT"]+" /out:"+make["OUT"]+" "+all_obj+" "+make["_LIBS"]);
-    if (make["LIBDIR"] != "\\"+target) WSH.Echo("for /f %%F in ('dir /b "+make["LIBDIR"]+"') do (if \"%%~xF\"==\".dll\" echo f | xcopy /y "+make["LIBDIR"]+"\\%%F "+make["OUTDIR"]+"\\%%F)")
+    if (make["LIBDIR"] != "\\"+target) WSH.Echo("cmd /c for /f %%F in ('dir /b "+make["LIBDIR"]+"') do (if \"%%~xF\"==\".dll\" echo f | xcopy /y "+make["LIBDIR"]+"\\%%F "+make["OUTDIR"]+"\\%%F)")
 } else {
-    WSH.Echo("echo compile: \"make [debug/release] [x86/x64] [ /multi/incremental/multi incremental]\"");
-    WSH.Echo("echo clean: \"make clean\"");
+    WSH.Echo("cmd /c echo compile: \"make [debug/release] [x86/x64] [ /multi/incremental/multi incremental]\"");
+    WSH.Echo("cmd /c echo clean: \"make clean\"");
 }
