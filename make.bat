@@ -1,121 +1,164 @@
 @if (@a==@b) @end /*
 @echo off
 SetLocal EnableDelayedExpansion
-
-set mode=%1
-set target=%2
-
-if not "%mode%"=="debug" if not "%mode%"=="release" if not "%mode%"=="clean" (
-    echo unknown mode "%mode%"
-    goto usage
-)
-
-if "%mode%"=="clean" (
-    call makelist.bat clean
-    goto clean
-)
-
-call makelist.bat %target%
-
-if not "%target%"=="x86" if not "%target%"=="x64" (
-    echo unknown target "%target%"
-    goto usage
-)
-
-:compile
-echo Compiling in %mode% mode for %target%
-title Compiler
-
-REM some windows functions are pedantic about \
-set OUTDIR=!OUTDIR!\%mode%\%target%
-set LIBDIR=!LIBDIR!\%target%
-set OUT=%OUTDIR%\%APP%
-
-if not exist %OUTDIR% mkdir %OUTDIR%
-if not exist %BINDIR% mkdir %BINDIR%
-if not exist %BINDIR%\%mode% mkdir %BINDIR%\%mode%
-if not exist %BINDIR%\%mode%\%target% mkdir %BINDIR%\%mode%\%target%
-
-set _LIBS=
-for %%L in (%LIBS%) do (
-    set _LIBS=!_LIBS! %LIBDIR%/%%L
-)
-
-if "%mode%"=="debug" goto debug
-if "%mode%"=="release" goto release
-
-:usage
-echo compile: "make [debug/release] [x86/x64] [ /multi/incremental/multi incremental]"
-echo clean: "make clean"
-goto :eof
-
-:clean
-if not exist %BINDIR% goto :eof
-pushd %BINDIR%
-del /f /q /s *.* >NUL
-popd
-:cleanrd
-RD /s /q %BINDIR%
-if exist %BINDIR% goto cleanrd
-goto :eof
-
-:release
-set COMPOPT=!COMPOPT! %RELCOMPOPT%
-set LINKOPT=!LINKOPT! %RELLINKOPT%
-goto run
-
-:debug
-set COMPOPT=!COMPOPT! %DBGCOMPOPT%
-set LINKOPT=!LINKOPT! %DBGLINKOPT%
-goto run
-
-:run
-set INCREMENTAL=0
-set MULTI=0
-if "%3"=="incremental" set INCREMENTAL=1
-if "%4"=="incremental" set INCREMENTAL=1
-if "%3"=="multi" set MULTI=1
-if "%4"=="multi" set MULTI=1
-
-set allobj=
-for %%P in (%SOURCES%) do (
-    set inp_src=
-    set inc=
-    set bin_dir=%BINDIR%\%mode%\%target%\%%P
-    if not exist !bin_dir! mkdir !bin_dir!
-    for %%O in (!%%P_OBJ!) do (
-        if "%INCREMENTAL%"=="1" (
-            for /f "delims=" %%A in ('cscript /nologo /e:jscript "%~f0" !bin_dir!\%%~nO.obj !%%P_SRC!\%%O') do (
-                if %%A LSS 0 set inp_src=!inp_src! !%%P_SRC!\%%O
-            )
-        ) else set inp_src=!inp_src! !%%P_SRC!\%%O
-        set allobj=!allobj! !bin_dir!\%%~nO.obj
+if "%1"=="clean" (
+    for /f "delims=" %%A in ('cscript /nologo /e:jscript "%~f0" %1') do (
+        set BINDIR=%%A
     )
-    for %%I in (!%%P_INC!) do (
-        set inc=!inc! /I%%I
-    )
-    if not "!inp_src!"=="" (
-        if "%MULTI%"=="1" (
-            call cl -std:%CPPVER% %COMPOPT% /MP /Fo:!bin_dir!\ /c !inp_src! !inc!
-        ) else (
-            call cl -std:%CPPVER% %COMPOPT% /Fo:!bin_dir!\ /c !inp_src! !inc!
-        )
-    )
+    if not exist !BINDIR! goto :eof
+    pushd !BINDIR!
+    del /f /q /s *.obj >NUL
+    popd
+    goto :eof
 )
-
-call link %LINKOPT% /out:%OUT% %allobj% %_LIBS%
-if not "%LIBDIR%"=="\%target%" for /f %%F in ('dir /b %LIBDIR%') do (
-    if "%%~xF"==".dll" echo f | xcopy /y %LIBDIR%\%%F %OUTDIR%\%%F
+for /f "delims=" %%A in ('cscript /nologo /e:jscript "%~f0" %*') do (
+    call cmd /c %%A
 )
 goto :eof
 */
+String.prototype.trim = function() { return this.replace(/^\s+|\s+$/g, ""); };
+String.prototype.toArgs = function() { return this.split(/\s+/g) || []; };
 var fs = new ActiveXObject("Scripting.FileSystemObject");
-var date1 = 0;
-if(fs.FileExists(WSH.Arguments(0))){
-    date1=Date.parse(fs.GetFile(WSH.Arguments(0)).DateLastModified);
+var fileCompare = function(file1, file2) {
+    var date1 = 0;
+    if (fs.FileExists(file1)) {
+        date1 = Date.parse(fs.GetFile(file1).DateLastModified);
+    }
+    if (fs.FileExists(file2)) {
+        return date1 - Date.parse(fs.GetFile(file2).DateLastModified);
+    }
+    return -1;
+};
+var f = fs.GetFile("Makefile");
+var ts = f.OpenAsTextStream(1, 0);
+var regex = /\s*=\s*/gi
+var make = {};
+var line = ts.ReadLine();
+while (line.indexOf("# BUILD SCRIPT") == -1) {
+    var longline = line.indexOf("\\");
+    while(longline != -1) {
+        line = line.substring(0,longline).trim()+" "+(ts.ReadLine().trim());
+        longline = line.indexOf("\\");
+    }
+    line = line.replace(regex, "=");
+    var bat = line.indexOf("#bat");
+    var comment = line.indexOf("#");
+    if (bat != -1)  line = line.substring(bat+4);
+    else if (comment != -1) line = line.substring(0, comment);
+    var eq = line.indexOf("=");
+    if (eq != -1) {
+        make[line.substring(0, eq).trim()] = line.substring(eq+1).trim();
+    }
+    line = ts.ReadLine();
 }
-var date2 = 0;
-if(fs.FileExists(WSH.Arguments(1))){
-    date2 = Date.parse(fs.GetFile(WSH.Arguments(1)).DateLastModified);
+var mode = WSH.Arguments(0);
+if (mode == "clean") {
+    WSH.Echo(make["BINDIR"]);
+} else if ((mode == "debug" || mode == "release") && (WSH.Arguments(1) == "x86" || WSH.Arguments(1) == "x64")) {
+    var target = WSH.Arguments(1);
+    if (mode == "debug") {
+        make["COMPOPT"] = make["COMPOPT"]+" "+make["DBGCOMPOPT"];
+        make["LINKOPT"] = make["LINKOPT"]+" "+make["DBGLINKOPT"];
+    } else {
+        make["COMPOPT"] = make["COMPOPT"]+" "+make["RELCOMPOPT"];
+        make["LINKOPT"] = make["LINKOPT"]+" "+make["RELLINKOPT"];
+    }
+    var multi = false;
+    var incremental = false;
+    if (WSH.Arguments.Length > 2) {
+        multi = multi || (WSH.Arguments(2) == "multi");
+        incremental = incremental || (WSH.Arguments(2) == "incremental");
+    }
+    if (WSH.Arguments.Length > 3) {
+        multi = multi || (WSH.Arguments(3) == "multi");
+        incremental = incremental || (WSH.Arguments(3) == "incremental");
+    }
+    make["OUTDIR"] = make["OUTDIR"]+"\\"+mode+"\\"+target;
+    make["LIBDIR"] = make["LIBDIR"]+"\\"+target;
+    make["OUT"] = make["OUTDIR"]+"\\"+make["APP"];
+    make["LIBS"] = make["LIBS"].toArgs();
+    make["_LIBS"] = "";
+    for (var lib in make["LIBS"]) {
+        make["LIBS"][lib] = make["LIBDIR"]+"\\"+make["LIBS"][lib];
+        make["_LIBS"] = make["_LIBS"]+" "+make["LIBS"][lib];
+    }
+    make["SOURCES"] = make["SOURCES"].toArgs();
+    var sources = {};
+    for (var _src in make["SOURCES"]) {
+        var src = make["SOURCES"][_src];
+        sources[src] = {
+            "SRC": make[src+"_SRC"] || ".",
+            "OBJ": (make[src+"_OBJ"] || "").toArgs(),
+            "HDR": (make[src+"_HDR"] || "").toArgs(),
+            "DEP": (make[src+"_DEP"] || "").toArgs(),
+            "INC": (make[src+"_INC"] || "").toArgs()
+        };
+    }
+    for (var _src in sources) {
+        var src = sources[_src];
+        src["DEPS"] = [];
+        // Add headers to deps
+        for (var _hdr in src["HDR"]) {
+            var hdr = src["HDR"][_hdr];
+            if (hdr) src["DEPS"].push(src["SRC"]+"\\"+hdr);
+        }
+        for (var _dep in src["DEP"]) {
+            var dep = sources[src["DEP"][_dep]];
+            if (dep) {
+                // Add dep objs to deps
+                for (var _depobj in dep["OBJ"]) {
+                    var depobj = dep["OBJ"][_depobj];
+                    if (depobj) src["DEPS"].push(dep["SRC"]+"\\"+depobj);
+                }
+                // Add dep headers to deps
+                for (var _dephdr in dep["HDR"]) {
+                    var dephdr = dep["HDR"][_dephdr];
+                    if (dephdr) src["DEPS"].push(dep["SRC"]+"\\"+dephdr);
+                }
+            }
+        }
+    }
+    var all_obj = "";
+    WSH.Echo(make["CXX"]+" "+target);
+    var compile = "call cl -std:"+make["CPPVER"]+" "+make["COMPOPT"]+" /c";
+    for (var _src in sources) {
+        var src = sources[_src];
+        var inp_src = "";
+        var inc = "";
+        var bin_dir = make["BINDIR"]+"\\"+mode+"\\"+target+"\\"+_src;
+        WSH.Echo("if not exist "+bin_dir+" mkdir "+bin_dir);
+        for (var _obj in src["OBJ"]) {
+            var obj = src["OBJ"][_obj];
+            var objOut = bin_dir+"\\"+obj.substring(0, obj.lastIndexOf("."))+".obj";
+            var add_src = !incremental;
+            if (incremental) {
+                for (var _dep in src["DEPS"]) {
+                    var dep = src["DEPS"][_dep];
+                    if (fileCompare(objOut, dep) < 0) add_src = true;
+                    if (add_src) break;
+                }
+            }
+            if (add_src) inp_src = inp_src+" "+src["SRC"]+"\\"+obj;
+            all_obj = all_obj+" "+objOut;
+        }
+        for (var _inc in src["INC"]) {
+            inc = inc+" /I"+src["INC"][_inc];
+        }
+        for (var _dep in src["DEP"]) {
+            if (sources[src["DEP"][_dep]]) inc = inc+" /I"+sources[src["DEP"][_dep]]["SRC"];
+        }
+        if (inp_src != "") {
+            if (multi) {
+                WSH.Echo(compile+" /MP "+inp_src+" "+inc+" /Fo:"+bin_dir+"\\");
+            } else {
+                WSH.Echo(compile+" "+inp_src+" "+inc+" /Fo:"+bin_dir+"\\");
+            }
+        }
+    }
+    WSH.Echo("if not exist "+make["OUTDIR"]+" mkdir "+make["OUTDIR"]);
+    WSH.Echo("link "+make["LINKOPT"]+" /out:"+make["OUT"]+" "+all_obj+" "+make["_LIBS"]);
+    if (make["LIBDIR"] != "\\"+target) WSH.Echo("for /f %%F in ('dir /b "+make["LIBDIR"]+"') do (if \"%%~xF\"==\".dll\" echo f | xcopy /y "+make["LIBDIR"]+"\\%%F "+make["OUTDIR"]+"\\%%F)")
+} else {
+    WSH.Echo("echo compile: \"make [debug/release] [x86/x64] [ /multi/incremental/multi incremental]\"");
+    WSH.Echo("echo clean: \"make clean\"");
 }
-WSH.Echo(date1 - date2);
