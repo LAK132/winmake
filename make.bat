@@ -14,6 +14,9 @@ if "%1"=="clean" (
 for /f "delims=" %%A in ('cscript /nologo /e:jscript "%~f0" %*') do (
     call %%A
 )
+if not "%LIBDIR%"=="\%target%" for /f %%F in ('dir /b %LIBDIR%') do (
+    if "%%~xF"==".dll" echo f | xcopy /y %LIBDIR%\%%F %OUTDIR%\%%F
+)
 goto :eof
 */
 String.prototype.trim = function() { return this.replace(/^\s+|\s+$/g, ""); };
@@ -161,7 +164,9 @@ if (mode == "clean") {
     }
     WSH.Echo("cmd /c if not exist "+make["OUTDIR"]+" mkdir "+make["OUTDIR"]);
     WSH.Echo("link "+make["LINKOPT"]+" /out:"+make["OUT"]+" "+all_obj+" "+make["_LIBS"]);
-    if (make["LIBDIR"] != "\\"+target) WSH.Echo("cmd /c for /f %%F in ('dir /b "+make["LIBDIR"]+"') do (if \"%%~xF\"==\".dll\" echo f | xcopy /y "+make["LIBDIR"]+"\\%%F "+make["OUTDIR"]+"\\%%F)")
+    WSH.Echo("set LIBDIR="+make["LIBDIR"]);
+    WSH.Echo("set OUTDIR="+make["OUTDIR"]);
+    WSH.Echo("set target="+target);
 } else {
     WSH.Echo("cmd /c echo compile: \"make [debug/release] [x86/x64] [ /multi/incremental/multi incremental]\"");
     WSH.Echo("cmd /c echo clean: \"make clean\"");
