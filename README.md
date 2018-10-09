@@ -49,11 +49,11 @@ To clean out the object folder
 
 ## The Easy Way (genmake)
 
-Simply run `genmake.py`, it will ask you a bunch of questions about the project and build a `make.bat` and `makelist.bat` or `Makefile` to match. It will attempt to find `.c`, `.cxx` and `.cpp` files within the project to add to the source lists
+Simply run `genmake.py`, it will ask you a bunch of questions about the project and build a `make.bat` and `Makefile` to match. It will attempt to find `.c`, `.cxx` and `.cpp` files within the project to add to the source lists
 
 ```
 > python genmake.py
-Create new makelist.bat? (Will overwrite existing file) [y/n]: y
+Create new Makefile? (Will overwrite existing file) [y/n]: y
 Output name (ie app.exe or lib.dll): app.exe
 Output directory: out
 Binaries directory: bin
@@ -78,7 +78,7 @@ Source "lib" include directories (optional): include lib ../../external/dependec
 
 ## The Hard Way
 
-Copy `make.bat` and `makelist.bat` (and `Makefile` for cross-platform projects) into the root directory of your project and edit them manually (instructions below)
+Copy `make.bat` and `Makefile` into the root directory of your project and edit them manually (instructions below)
 
 ## `Makefile`
 
