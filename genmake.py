@@ -113,6 +113,11 @@ if (mode == "clean") {
     for (var _src in sources) {
         var src = sources[_src];
         src["DEPS"] = [];
+        // Add source files to deps
+        for (var _obj in src["OBJ"]) {
+            var obj = src["OBJ"][_obj];
+            if (obj) src["DEPS"].push(src["SRC"]+"\\"+obj);
+        }
         // Add headers to deps
         for (var _hdr in src["HDR"]) {
             var hdr = src["HDR"][_hdr];
