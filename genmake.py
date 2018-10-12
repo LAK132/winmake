@@ -78,14 +78,14 @@ if (mode == "clean") {
         make["LINKOPT"] = make["LINKOPT"]+" "+make["RELLINKOPT"];
     }
     var multi = false;
-    var incremental = false;
+    var force = false;
     if (WSH.Arguments.Length > 2) {
-        multi = multi || (WSH.Arguments(2) == "multi");
-        incremental = incremental || (WSH.Arguments(2) == "incremental");
+        multi = multi || (WSH.Arguments(2) == "-j");
+        force = force || (WSH.Arguments(2) == "-B");
     }
     if (WSH.Arguments.Length > 3) {
-        multi = multi || (WSH.Arguments(3) == "multi");
-        incremental = incremental || (WSH.Arguments(3) == "incremental");
+        multi = multi || (WSH.Arguments(3) == "-j");
+        force = force || (WSH.Arguments(3) == "-B");
     }
     make["OUTDIR"] = make["OUTDIR"]+"\\"+mode+"\\"+target;
     make["LIBDIR"] = make["LIBDIR"]+"\\"+target;
@@ -113,12 +113,6 @@ if (mode == "clean") {
     for (var _src in sources) {
         var src = sources[_src];
         src["DEPS"] = [];
-        // Add source files to deps
-        for (var _obj in src["OBJ"]) {
-            var obj = src["OBJ"][_obj];
-            if (obj) src["DEPS"].push(src["SRC"]+"\\"+obj);
-        }
-        // Add headers to deps
         for (var _hdr in src["HDR"]) {
             var hdr = src["HDR"][_hdr];
             if (hdr) src["DEPS"].push(src["SRC"]+"\\"+hdr);
@@ -126,12 +120,6 @@ if (mode == "clean") {
         for (var _dep in src["DEP"]) {
             var dep = sources[src["DEP"][_dep]];
             if (dep) {
-                // Add dep objs to deps
-                for (var _depobj in dep["OBJ"]) {
-                    var depobj = dep["OBJ"][_depobj];
-                    if (depobj) src["DEPS"].push(dep["SRC"]+"\\"+depobj);
-                }
-                // Add dep headers to deps
                 for (var _dephdr in dep["HDR"]) {
                     var dephdr = dep["HDR"][_dephdr];
                     if (dephdr) src["DEPS"].push(dep["SRC"]+"\\"+dephdr);
@@ -152,23 +140,29 @@ if (mode == "clean") {
             var obj = src["OBJ"][_obj];
             if (obj) {
                 var objOut = bin_dir+"\\"+obj.substring(0, obj.lastIndexOf("."))+".obj";
-                var add_src = !incremental;
-                if (incremental) {
+                var add_src = force;
+                if (!force) {
                     for (var _dep in src["DEPS"]) {
                         var dep = src["DEPS"][_dep];
-                        if (fileCompare(objOut, dep) < 0) add_src = true;
-                        if (add_src) break;
+                        if (fileCompare(objOut, dep) < 0) { add_src = true; break; }
                     }
+                    if (!add_src && fileCompare(objOut, src["SRC"]+"\\"+obj) < 0) add_src = true;
                 }
                 if (add_src) inp_src = inp_src+" "+src["SRC"]+"\\"+obj;
                 all_obj = all_obj+" "+objOut;
             }
         }
         for (var _inc in src["INC"]) {
-            inc = inc+" /I"+src["INC"][_inc];
+            if (src["INC"][_inc]) inc = inc+" /I"+src["INC"][_inc];
         }
         for (var _dep in src["DEP"]) {
-            if (sources[src["DEP"][_dep]]) inc = inc+" /I"+sources[src["DEP"][_dep]]["SRC"];
+            var dep = sources[src["DEP"][_dep]];
+            if (dep) {
+                inc = inc+" /I"+dep["SRC"];
+                for (var _inc in dep["INC"]) {
+                    if (dep["INC"][_inc]) inc = inc+" /I"+dep["INC"][_inc];
+                }
+            }
         }
         if (inp_src != "") {
             if (multi) {
@@ -184,7 +178,7 @@ if (mode == "clean") {
     WSH.Echo("set OUTDIR="+make["OUTDIR"]);
     WSH.Echo("set target="+target);
 } else {
-    WSH.Echo("cmd /c echo compile: \"make [debug/release] [x86/x64] [ /multi/incremental/multi incremental]\"");
+    WSH.Echo("cmd /c echo compile: \"make [debug/release] [x86/x64] [-f] [-B]\"");
     WSH.Echo("cmd /c echo clean: \"make clean\"");
 }""")
 
@@ -315,5 +309,5 @@ $(BINDIR)/dbg$(1)%.o: $(2)/% $(3)
 $(BINDIR)/rel$(1)%.o: $(2)/% $(3)
 	$(CXX) -std=$(CPPVER) -c $(4) $(COMPOPT) $(RELCOMPOPT) -o $$@ $$<
 endef
-$(foreach src,$(SOURCES),$(eval $(call COMPILE_TEMPLATE,$(src),$($(src)_SRC),$(foreach header,$($(src)_HDR),$($(src)_SRC)/$(header)) $(foreach dep,$($(src)_DEP),$(foreach depobj,$($(dep)_OBJ),$($(dep)_SRC)/$(depobj)) $(foreach dephdr,$($(dep)_HDR),$($(dep)_SRC)/$(dephdr))),$(foreach inc,$($(src)_INC),-I$(inc)) $(foreach dep,$($(src)_DEP),-I$($(dep)_SRC)))))""")
+$(foreach src,$(SOURCES),$(eval $(call COMPILE_TEMPLATE,$(src),$($(src)_SRC),$(foreach header,$($(src)_HDR),$($(src)_SRC)/$(header)) $(foreach dep,$($(src)_DEP),$(foreach depobj,$($(dep)_OBJ),$($(dep)_SRC)/$(depobj)) $(foreach dephdr,$($(dep)_HDR),$($(dep)_SRC)/$(dephdr))),$(foreach inc,$($(src)_INC),-I$(inc)) $(foreach dep,$($(src)_DEP),-I$($(dep)_SRC) $(foreach depinc,$($(dep)_INC),-I$(depinc) )))))""")
         fyle.truncate()
